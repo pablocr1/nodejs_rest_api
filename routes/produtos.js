@@ -1,9 +1,19 @@
 const express = require('express');
 const router = express.Router();
+const mysql = require('../mysql').pool;
 
 router.get('/', (req, res, next) => {
-    res.status(200).send({
-        mensagem: 'Retorna os produtos'
+    mysql.getConnection((error, conn) => {
+        if (error) {return res.status(500).send({error: error})}
+        conn.query(
+            'SELECT * FROM produtos',
+            (error, resultado, fields) => {
+                if (error) {return res.status(500).send({error: error})}
+                res.status(200).send({
+                    response: resultado
+                });
+            }
+        )
     });
 });
 
@@ -12,23 +22,45 @@ router.post('/', (req, res, next) => {
         nome: req.body.nome,
         preco: req.body.preco
     }
-    res.status(201).send({
-        mensagem: 'Produto criado',
-        produto: produto
+
+    mysql.getConnection((error, conn) => {
+        if (error) {return res.status(500).send({error: error})}
+        conn.query(
+            'INSERT INTO produtos (nome, preco) VALUES (?,?)',
+            [req.body.nome, req.body.preco],
+            (error, resultado, field) => {
+                conn.release();
+                if (error) {
+                    return res.status(500).send({
+                        error: error,
+                        response: null
+                    });
+                }
+
+                res.status(201).send({
+                    mensagem: 'Produto criado com sucesso',
+                    id_produto: resultado.insertId
+                });
+            }
+        )
     });
 });
 
 router.get('/:id', (req, res, next) => {
     const id = req.params.id
-    if (id === 'especial') {
-        res.status(200).send({
-            mensagem: 'Detalhes do produto: ' + id
-        });
-    } else {
-        res.status(200).send({
-            mensagem: 'Detalhes do produto: ' + id
-        });
-    }
+    mysql.getConnection((error, conn) => {
+        if (error) {return res.status(500).send({error: error})}
+        conn.query(
+            'SELECT * FROM produtos WHERE produtos.id = ?',
+            [id],
+            (error, resultado, fields) => {
+                if (error) {return res.status(500).send({error: error})}
+                res.status(200).send({
+                    response: resultado
+                });
+            }
+        )
+    });
 });
 
 
